@@ -1,0 +1,16 @@
+version: "3.8"
+
+services:
+  backend:
+    build: ./backend # Assumes you have a Dockerfile in the backend folder
+    ports:
+      - "5050:5050" # Exposes backend API on host:5050
+    volumes:
+      # Bind-mount your LucidLink-mounted folder into the container
+      - /Volumes/cloudworks/prod/uploads:/app/uploads
+    environment:
+      - UPLOAD_DIR=/app/uploads
+      - UPLOAD_TOKEN=someSecureTokenHere
+      - UPLOAD_USERNAME=admin
+      - UPLOAD_PASSWORD=password
+    restart: unless-stopped
