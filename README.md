@@ -132,18 +132,6 @@ Make sure to:
 
 ---
 
-Alternatively, LucidLink provides an official script to automate installation and systemd service setup:
-
-```bash
-wget https://lucidlink-support.s3.amazonaws.com/scripts/lucid3_systemd.sh -O lucid3_systemd.sh
-chmod +x lucid3_systemd.sh
-sudo ./lucid3_systemd.sh --fs &lt;filespace.domain&gt; --user &lt;username&gt; --password &lt;password&gt; --mount-point /media/filespace
-```
-
-This script downloads, installs, and configures the LucidLink client, as well as creates and manages the systemd service for you.
-
----
-
 ### 🧱 Local Development Setup
 
 #### Backend (Express)
