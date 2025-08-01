@@ -1,4 +1,4 @@
-# LucidPortal Uploader
+# Upload Portal
 
 A self-hosted, browser-based file uploader designed for use with LucidLink Filespaces. Built with a React frontend and Express.js backend, this framework allows organizations to easily deploy and manage secure file upload portals.
 
