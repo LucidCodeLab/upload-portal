@@ -8,72 +8,191 @@ A self-hosted, browser-based file uploader designed for use with LucidLink Files
 
 - Direct-to-LucidLink file uploads via web browser
 - Simple authentication via username/password
-- Files securely streamed to LucidLink-mounted directories
+- Files securely streamed to LucidLink-mounted directory
 - Supports large file uploads
-- Easily configurable via `.env` file
+- Docker deployment support with volume bind for LucidLink integration
 
 ---
 
 ## 📦 Folder Structure
 
+```
 project-root/
-├── backend/ # Express backend API
-│ ├── server.js
-│ ├── .env.example
-├── frontend/ # React frontend using Uppy
-│ └── (React files)
-├── README.md
-├── .gitignore
+├── backend/            # Express backend API and static frontend
+│   ├── Dockerfile
+│   ├── frontend-dist/  # Compiled React frontend served by Express
+│   │   ├── assets/
+│   │   ├── icon.svg
+│   │   ├── index.html
+│   │   └── logo.svg
+│   ├── package-lock.json
+│   ├── package.json
+│   └── server.js
+├── docker-compose.yml  # Docker Compose deployment
+└── README.md
+```
 
 ---
 
 ## ⚙️ Setup Instructions
 
-### 1️⃣ Backend Setup
+### 📦 Installing LucidLink on Linux (CLI)
 
-1. Navigate to the backend folder:
+You can install the LucidLink client on a Linux server via the command line using one of the following methods:
 
-cd backend
+#### **Method 1: Using the Official Install Script**
 
-2. Install dependencies:
+1. Download the latest installer script:
+   ```bash
+   curl -fsSL https://www.lucidlink.com/download/latest/install-lucid.sh -o install-lucid.sh
+   ```
+2. Make the script executable:
+   ```bash
+   chmod +x install-lucid.sh
+   ```
+3. Run the installer (as root or using sudo):
+   ```bash
+   sudo ./install-lucid.sh
+   ```
 
-npm install
+#### **Method 2: Using the latest .deb release**
 
-3. Configure environment variables:
-
-- Copy the example file:
-  ```
-  cp .env.example .env
-  ```
-- Fill out `.env` with your details:
-  - `UPLOAD_DIR`: Path to your LucidLink-mounted upload directory
-  - `UPLOAD_USERNAME` and `UPLOAD_PASSWORD`: Your chosen login credentials
-
-4. Mount your LucidLink Filespace as desired.
-
-5. Start the backend server:
-
-node server.js
+1. Download the latest `.deb` package:
+   ```bash
+   wget https://www.lucidlink.com/download/new-ll-latest/linux-deb/stable/ -O lucidinstaller.deb
+   ```
+2. Update apt and install:
+   ```bash
+   sudo apt update -y
+   sudo apt install ./lucidinstaller.deb -y
+   ```
 
 ---
 
-### 2️⃣ Frontend Setup
+After either installation method, verify the binary:
 
-1. Navigate to the frontend folder:
+```bash
+lucid --version
+```
 
-cd frontend
+This installs the `lucid` CLI client to `/usr/local/bin/lucid`.
 
+---
+
+### 🖥️ LucidLink Filespace Systemd Setup
+
+For persistent LucidLink Filespace mounting via `systemd`, you can use the following service unit:
+
+```ini
+[Unit]
+Description=LucidLink filespace Daemon
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/root/lucidlink.service.pwd
+WorkingDirectory=/root
+
+ExecStartPre=/bin/sleep 15
+
+ExecStart=/usr/local/bin/lucid daemon
+
+ExecStartPost=/bin/bash -c 'until lucid status | grep -q "Unlinked"; do sleep 1; done'
+ExecStartPost=/bin/bash -c "/usr/local/bin/lucid link --fs '${FILESPACE}' --user '${USER}' --password '${PASSWORD}' --mount-point /media/filespace"
+
+ExecStop=/usr/local/bin/lucid exit
+
+Restart=always
+RestartSec=10
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Make sure to:
+
+- Save this as `/etc/systemd/system/lucidlink.service`
+- Create `/root/lucidlink.service.pwd` with:
+  ```
+  FILESPACE=your_filespace_name
+  USER=your_username
+  PASSWORD=your_password
+  ```
+- Reload systemd and enable the service:
+  ```bash
+  sudo systemctl daemon-reexec
+  sudo systemctl daemon-reload
+  sudo systemctl enable lucidlink.service
+  sudo systemctl start lucidlink.service
+  ```
+
+---
+
+Alternatively, LucidLink provides an official script to automate installation and systemd service setup:
+
+```bash
+wget https://lucidlink-support.s3.amazonaws.com/scripts/lucid3_systemd.sh -O lucid3_systemd.sh
+chmod +x lucid3_systemd.sh
+sudo ./lucid3_systemd.sh --fs &lt;filespace.domain&gt; --user &lt;username&gt; --password &lt;password&gt; --mount-point /media/filespace
+```
+
+This script downloads, installs, and configures the LucidLink client, as well as creates and manages the systemd service for you.
+
+---
+
+### 🧱 Local Development Setup
+
+#### Backend (Express)
+
+1. Navigate to the backend folder:
+   ```
+   cd backend
+   ```
 2. Install dependencies:
+   ```
+   npm install
+   ```
+3. Configure environment variables:
+   - Copy the example file:
+     ```
+     cp .env.example .env
+     ```
+   - Fill out `.env` with your details:
+     - `UPLOAD_DIR`: Path to your LucidLink-mounted upload directory
+     - `UPLOAD_USERNAME` and `UPLOAD_PASSWORD`: Your chosen login credentials
+4. Mount your LucidLink Filespace as desired.
+5. Start the backend server:
+   ```
+   node server.js
+   ```
 
-npm install
+### 🐳 Docker Deployment
 
-3. Start the development server:
+You can run the entire app (frontend + backend) using Docker Compose:
 
-npm run dev
+1. Ensure your LucidLink Filespace is mounted locally, e.g., at:
 
-4. Access the uploader in your browser at:
+   ```
+   /Volumes/cloudworks/prod/uploads
+   ```
 
-http://localhost:5173
+2. From the project root, run:
+
+   ```bash
+   docker-compose up --build
+   ```
+
+3. Open your browser to [http://localhost:5050](http://localhost:5050)
+
+Environment variables are defined in `docker-compose.yml`. These include:
+
+- `UPLOAD_DIR`: where uploaded files will be saved inside the container
+- `UPLOAD_USERNAME` / `UPLOAD_PASSWORD`: login credentials
+- `UPLOAD_TOKEN`: (optional) token for bearer auth
 
 ---
 
@@ -88,7 +207,6 @@ http://localhost:5173
 
 ## 📁 Customization
 
-- Logo and branding can be customized in the React frontend.
 - To customize authentication or add multi-user support, modify the backend’s `/login` and `/upload` routes.
 
 ---
